@@ -2,6 +2,7 @@ package com.pg.bigdata.neighborhoodanalytics.aoc.fp
 
 import cats.effect.IO
 
+import scala.annotation.tailrec
 import scala.collection.immutable
 
 object Day8 extends Exercise(2024, 8) {
@@ -37,19 +38,13 @@ object Day8 extends Exercise(2024, 8) {
 
     def makeCombinations(char: Char): List[(Point, Point)] = {
       val points: List[Point] = map(char)
-      val temp = points.combinations(2).toList.map {
+      points.combinations(2).toList.map {
         case List(a, b) => (a, b)
         case List(_) => (Point(0, 0), Point(0, 0))
       }
-      println(temp)
-      temp
     }
 
     def findAntinode(combination: (Point, Point)): Option[Point] = {
-//      val slope: Double = (combination._2.y - combination._1.y) / (combination._2.x - combination._1.x)
-//      val intercept: Double = combination._1.y - slope * combination._1.x
-//      def line(x: Int): Int = (slope * x + intercept).toInt
-//      val vectorP1P2: Point = Point(combination._2.x - combination._1.x, combination._2.y - combination._1.y)
       val p3x: Int = 2 * combination._2.x - combination._1.x
       val p3y: Int = 2 * combination._2.y - combination._1.y
       val p3: Point = Point(p3x, p3y)
@@ -68,20 +63,53 @@ object Day8 extends Exercise(2024, 8) {
       }
     }
 
-    def findAntinodes(char: Char): Set[Point] = {
+    def findAntinodesPerCombinationWithResonantHarmonics(combination: (Point, Point)): Set[Point] = {
+      if (combination._1 == combination._2) Set.empty[Point]
+
+      // Find line equation for each combination
+      val p1: Point = combination._1
+      val p2: Point = combination._2
+      val dx: Int = p2.x - p1.x
+      val dy: Int = p2.y - p1.y
+
+      @tailrec
+      def gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
+
+      val gcdValue: Int = gcd(dx.abs, dy.abs)
+      val stepX: Int = dx / gcdValue
+      val stepY: Int = dy / gcdValue
+
+      @tailrec
+      def helper(x: Int, y: Int, acc: Set[Point], up: Int): Set[Point] = {
+        val newX = x + stepX * up
+        val newY = y + stepY * up
+        val p: Point = Point(newX, newY)
+        if (overBoundary(p)) acc
+        else if (map.values.flatten.toSet.contains(p)) helper(newX, newY, acc + p, up)
+        else helper(newX, newY, acc, up)
+      }
+
+      helper(p1.x, p1.y, Set.empty[Point], 1) ++ helper(p2.x, p2.y, Set.empty[Point], -1)
+    }
+
+    def findAntinodesPerChar(char: Char, findPerCombination: ((Point, Point)) => Set[Point]): Set[Point] = {
       makeCombinations(char).foldLeft(Set.empty[Point]) { case (set, combination) =>
-        set ++ findAntinodesPerCombination(combination)
+        set ++ findPerCombination(combination)
       }
     }
 
-    def findAntinodesForAllCharacters: Set[Point] = {
+    def findAntinodesForAllCharacters(findPerCombination: ((Point, Point)) => Set[Point]): Set[Point] = {
       map.keys.filter(_ != '.').foldLeft(Set.empty[Point]) { case (set, char) =>
-        set ++ findAntinodes(char)
+        set ++ findAntinodesPerChar(char, findPerCombination)
       }
     }
 
     def countAllAntinodes: Int = {
-      findAntinodesForAllCharacters.size
+      findAntinodesForAllCharacters(findAntinodesPerCombination).size
+    }
+
+    def countAllAntinodesWithResonantHarmonics: Int = {
+      findAntinodesForAllCharacters(findAntinodesPerCombinationWithResonantHarmonics).size
     }
   }
 
@@ -99,12 +127,14 @@ object Day8 extends Exercise(2024, 8) {
     }
   }
 
-  println(Map(input))
-  println(Map(input).countAllAntinodes)
+//  println(Map(input))
+//  println(Map(input).countAllAntinodesWithResonantHarmonics)
 
   override def part1(input: List[String]): IO[String] = {
     IO.pure(Map(input).countAllAntinodes.toString)
   }
 
-  override def part2(input: List[String]): IO[String] = ???
+  override def part2(input: List[String]): IO[String] = {
+    IO.pure(Map(input).countAllAntinodesWithResonantHarmonics.toString)
+  }
 }
