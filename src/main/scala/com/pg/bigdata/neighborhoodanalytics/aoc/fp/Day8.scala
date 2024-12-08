@@ -66,7 +66,6 @@ object Day8 extends Exercise(2024, 8) {
     def findAntinodesPerCombinationWithResonantHarmonics(combination: (Point, Point)): Set[Point] = {
       if (combination._1 == combination._2) Set.empty[Point]
 
-      // Find line equation for each combination
       val p1: Point = combination._1
       val p2: Point = combination._2
       val dx: Int = p2.x - p1.x
